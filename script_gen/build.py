@@ -1,6 +1,6 @@
 import os
 
-from glob import ELEKTRA_PREFIX, BUILD_PREFIX, INSTALL_PREFIX
+from glob import ELEKTRA_PREFIX, OUTPUT_PREFIX, BUILD_PREFIX, INSTALL_PREFIX
 
 def generate_build_command_default(root_dir, run_tests = False, clean_build = False):
     return generate_build_command(root_dir, run_tests, clean_build, False, None, None, None, 8)
@@ -10,11 +10,11 @@ def generate_build_command_all(root_dir, run_tests = False, clean_build = False)
 
 def generate_build_command(root_dir, run_tests, clean_build, build_doc, plugins, tools, bindings, jobs):
     elektra_path = os.path.join(root_dir, ELEKTRA_PREFIX)
-    build_path = os.path.join(root_dir, BUILD_PREFIX)
-    install_path = os.path.join(root_dir, INSTALL_PREFIX)
-    kdb_config_path = os.path.join(root_dir, "config", "kdb")
+    build_path = os.path.join(root_dir, OUTPUT_PREFIX, BUILD_PREFIX)
+    install_path = os.path.join(root_dir, OUTPUT_PREFIX, INSTALL_PREFIX)
+    kdb_config_path = os.path.join(root_dir, OUTPUT_PREFIX, "config", "kdb")
 
-    clean_cmd = f"rm -rf {install_path}"
+    clean_cmd = f"rm -rf {install_path} {kdb_config_path}"
     if clean_build:
         clean_cmd += f" {build_path}"
 

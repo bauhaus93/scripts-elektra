@@ -1,28 +1,29 @@
 import os
+import tempfile
 
-from glob import BUILD_CONTAINER_PREFIX
+from glob import BUILD_CONTAINER_PREFIX, ELEKTRA_PREFIX
 from git import generate_git_clone
 
-def generate_container_build_default(root_dir):
-    return generate_command(root_dir, "ElektraInitiative", "libelektra", "buildelektra-stretch-full")
+def generate_container(build_type):
+    return generate_container_build("ElektraInitiative", "libelektra", build_type, "buildelektra-stretch-full")
 
-def generate_container_build(root_dir, git_name, git_repository, image_name):
-    build_path = os.path.abspath(os.path.join(root_dir, BUILD_CONTAINER_PREFIX))
-    elektra_path = os.path.abspath(os.path.join(root_dir, git_repository))
+def generate_container_build(git_name, git_repository, script_path, image_name):
+    build_path = os.path.join(tempfile.gettempdir(), "build_elektra_container")
+    full_script_path = os.path.join("scripts", "docker", script_path)
 
     setup_cmd = f"rm -rf {build_path} && mkdir -p {build_path} && cd {build_path}"
     git_clone_cmd = generate_git_clone(git_name, git_repository)
-    docker_cmd = generate_build_cmd(image_name)
+    docker_cmd = generate_build_cmd(image_name, full_script_path)
 
-    cmd = f"{setup_cmd} && {git_clone_cmd} && {docker_cmd}"
+    cmd = f"{setup_cmd} && {git_clone_cmd} && cd {ELEKTRA_PREFIX} && {docker_cmd}"
 
     return cmd
 
-
-def generate_build_cmd(image_name):
+def generate_build_cmd(image_name, script_path):
+    dockerfile_path = os.path.join(script_path, "Dockerfile")
     cmd = f"docker build -t {image_name} \\\n"
     cmd += "--build-arg JENKINS_USERID=`id -u` \\\n"
     cmd += "--build-arg JENKINS_GROUPID=`id -g` \\\n"
-    cmd += "-f scripts/docker/debian/stretch/Dockerfile \\\n"
-    cmd += "scripts/docker/debian/stretch/"
+    cmd += f"-f {dockerfile_path} \\\n"
+    cmd += f"{script_path}"
     return cmd
