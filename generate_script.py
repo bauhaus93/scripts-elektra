@@ -38,13 +38,17 @@ def build_test_cmd(kdb_path):
     cmd = f"{kdb_path} run_all"
     return cmd
 
-def build_command(root_dir, run_tests, build_doc, plugins, tools, bindings, jobs):
+def build_command(root_dir, run_tests, clean_build, build_doc, plugins, tools, bindings, jobs):
     elektra_path = os.path.join(root_dir, ELEKTRA_PREFIX)
     build_path = os.path.join(root_dir, BUILD_PREFIX)
     install_path = os.path.join(root_dir, INSTALL_PREFIX)
     kdb_path = os.path.join(install_path, "bin", "kdb")
 
-    setup_cmd = f"rm -rf {build_path} {install_path} && \\\nmkdir -p {build_path} {install_path} && \\\ncd {build_path}"
+    clean_cmd = f"rm -rf {install_path}"
+    if clean_build:
+        clean_cmd += f" {build_path}"
+
+    setup_cmd = f"{clean_cmd} && \\\nmkdir -p {build_path} {install_path} && \\\ncd {build_path}"
     cmake_cmd = build_cmake_cmd(elektra_path, install_path, build_doc, plugins, tools, bindings)
     make_cmd = build_make_cmd(8)
 
@@ -56,11 +60,11 @@ def build_command(root_dir, run_tests, build_doc, plugins, tools, bindings, jobs
 
     return cmd
 
-def build_command_default(root_dir, run_tests = False):
-    return build_command(root_dir, run_tests, False, None, None, None, 8)
+def build_command_default(root_dir, run_tests = False, clean_build = False):
+    return build_command(root_dir, run_tests, clean_build, False, None, None, None, 8)
 
-def build_command_all(root_dir, run_tests = False):
-    return build_command(root_dir, run_tests, True, "ALL", "ALL", "ALL", 8)
+def build_command_all(root_dir, run_tests = False, clean_build = False):
+    return build_command(root_dir, run_tests, clean_build, True, "ALL", "ALL", "ALL", 8)
 
 def create_script_command(cmd, script_name):
     with open(script_name, "w") as f:
@@ -109,6 +113,7 @@ parser.add_argument("--build-type", metavar="type_str", type=str, default = "def
 parser.add_argument("--run-tests", action = "store_true", help = "Check if want to run tests after build")
 
 parser.add_argument("--build-base-image", action = "store_true", help = "Check if want to rebuild base docker image")
+parser.add_argument("--clean-build", action = "store_true", help = "Check if want to clean build directory before build")
 
 args = parser.parse_args()
 
@@ -118,11 +123,15 @@ if __name__ == "__main__":
         cmd = container_build_command_default(CURR_DIR)
         script_path = os.path.join(LOCAL_ROOT, "rebuild_container.sh")
     else:
+        elektra_dir = os.path.join(os.path.abspath("."), "libelektra")
+        if not (os.path.isdir(elektra_dir) and os.path.exists(elektra_dir)):
+            print("Script must be executed in directory which contains libelektra dir, but {elektra_dir} not existing")
+            exit(1)
         script_path = os.path.join(LOCAL_ROOT, "build.sh")
         if args.build_type == "all":
-            cmd = build_command_all(CONTAINER_ROOT, args.run_tests)
+            cmd = build_command_all(CONTAINER_ROOT, args.run_tests, args.clean_build)
         elif args.build_type == "lcdproc":
-            cmd = build_command_default(CONTAINER_ROOT, args.run_tests)
+            cmd = build_command_default(CONTAINER_ROOT, args.run_tests, args.clean_build)
         else:
-            cmd = build_command_default(CONTAINER_ROOT, args.run_tests)
+            cmd = build_command_default(CONTAINER_ROOT, args.run_tests, args.clean_build)
     create_script_command(cmd, script_path)
