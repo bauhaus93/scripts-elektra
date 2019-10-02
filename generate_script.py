@@ -63,7 +63,7 @@ def build_command(root_dir, run_tests, clean_build, build_doc, plugins, tools, b
     cmd = f"{setup_cmd} && \\\n{cmake_cmd} && \\\n{make_cmd}"
 
     if run_tests:
-        test_cmd = build_test_cmd(8)
+        test_cmd = build_test_cmd(16)
         cmd += f" && \\\n{test_cmd}"
 
     return cmd
