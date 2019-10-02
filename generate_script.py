@@ -128,7 +128,7 @@ args = parser.parse_args()
 if __name__ == "__main__":
 
     if args.build_base_image:
-        cmd = container_build_command_default(CURR_DIR)
+        cmd = container_build_command_default(LOCAL_ROOT)
         script_path = os.path.join(LOCAL_ROOT, "rebuild_container.sh")
     else:
         elektra_dir = os.path.join(os.path.abspath("."), "libelektra")
