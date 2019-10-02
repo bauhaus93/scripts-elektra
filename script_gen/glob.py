@@ -6,6 +6,4 @@ INSTALL_PREFIX = "system"
 BUILD_CONTAINER_PREFIX = "build_container"
 OUTPUT_PREFIX = "output"
 
-IMAGE_NAME = "buildelektra-stretch-full"
-
 CONTAINER_ROOT = os.path.join("/", "home", "jenkins", "workspace")
