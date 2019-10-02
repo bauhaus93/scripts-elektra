@@ -95,6 +95,13 @@ def container_build_command(root_dir, git_name, git_repository, image_name):
 def container_build_command_default(root_dir):
     return container_build_command(root_dir, "ElektraInitiative", "libelektra", "buildelektra-stretch-full")
 
+def execute_command(cmd):
+    popen = subprocess.Popen(cmd, stdout = subprocess.PIPE, universal_newlines = True)
+    for line in iter(popen.stdout.readline, ""):
+        print(line, end = "")
+    popen.stdout.close()
+    ret_code = popen.wait()
+    return ret_code
 
 parser = argparse.ArgumentParser(description='Build/Test libelektra configurations')
 
@@ -109,12 +116,13 @@ if __name__ == "__main__":
 
     if args.build_base_image:
         cmd = container_build_command_default(CURR_DIR)
+        script_path = os.path.join(LOCAL_ROOT, "rebuild_container.sh")
     else:
-        SCRIPT_PATH = os.path.join(LOCAL_ROOT, "build.sh")
+        script_path = os.path.join(LOCAL_ROOT, "build.sh")
         if args.build_type == "all":
             cmd = build_command_all(CONTAINER_ROOT, args.run_tests)
         elif args.build_type == "lcdproc":
             cmd = build_command_default(CONTAINER_ROOT, args.run_tests)
         else:
             cmd = build_command_default(CONTAINER_ROOT, args.run_tests)
-        create_script_command(cmd, SCRIPT_PATH)
+    create_script_command(cmd, script_path)

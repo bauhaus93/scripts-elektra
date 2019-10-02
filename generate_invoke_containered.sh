@@ -2,7 +2,7 @@
 
 IMAGE_NAME="buildelektra-stretch-full"
 
-../scripts/build.py $@
+../scripts/generate_script.py $@
 
 [[ -f $PWD/build.sh ]] && \
     chmod +x $PWD/build.sh && \
