@@ -133,7 +133,7 @@ if __name__ == "__main__":
     else:
         elektra_dir = os.path.join(os.path.abspath("."), "libelektra")
         if not (os.path.isdir(elektra_dir) and os.path.exists(elektra_dir)):
-            print("Script must be executed in directory which contains libelektra dir, but {elektra_dir} not existing")
+            print(f"Script must be executed in directory which contains libelektra dir, but '{elektra_dir}' not existing")
             exit(1)
         script_path = os.path.join(LOCAL_ROOT, "build.sh")
         if args.build_type == "all":
