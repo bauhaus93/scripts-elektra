@@ -1,5 +1,1 @@
-expose
-fork
-lcdproc
-main
-toml_parser
+__pycache__/
