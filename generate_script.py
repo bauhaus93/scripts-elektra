@@ -3,7 +3,6 @@
 import os
 import sys
 import subprocess
-import shutil
 import argparse
 
 ELEKTRA_PREFIX = "libelektra"
@@ -14,8 +13,16 @@ IMAGE_NAME = "buildelektra-stretch-full"
 LOCAL_ROOT = os.path.abspath(".")
 CONTAINER_ROOT = os.path.join("/", "home", "jenkins", "workspace")
 
-def build_cmake_cmd(elektra_path, install_path, build_doc, plugins, tools, bindings):
+def build_cmake_cmd(elektra_path, install_path, kdb_config_path, build_doc, plugins, tools, bindings):
+    kdb_system_path = os.path.join(kdb_config_path, "system")
+    kdb_spec_path = os.path.join(kdb_config_path, "spec")
+    kdb_home_path = os.path.join(kdb_config_path, "home")
+
     cmd = f'cmake {elektra_path} \\\n\t-DCMAKE_INSTALL_PREFIX="{install_path}"'
+    cmd += f' \\\n\t-DKDB_DB_SYSTEM="{kdb_system_path}"'
+    cmd += f' \\\n\t-DKDB_DB_SPEC="{kdb_spec_path}"'
+    cmd += f' \\\n\t-DKDB_DB_HOME="{kdb_home_path}"'
+    cmd += " \\\n\t-DBUILD_STATIC=ON -DBUILD_COVERAGE=ON"
 
     if build_doc:
         cmd += f" \\\n\t-DBUILD_DOCUMENTATION=ON"
@@ -34,28 +41,29 @@ def build_make_cmd(jobs = 8):
     cmd = f"make -j{jobs} install"
     return cmd
 
-def build_test_cmd(kdb_path):
-    cmd = f"{kdb_path} run_all"
+def build_test_cmd(jobs = 8):
+    cmd = f"ctest -j {jobs} --force-new-ctest-process --output-on-failure --no-compress-output"
+    cmd += "\\\n\t-T Test -E \"testmod_(crypto_(botan|openssl)|dbus(recv)?|fcrypt|gpgme|zeromqsend)\""
     return cmd
 
 def build_command(root_dir, run_tests, clean_build, build_doc, plugins, tools, bindings, jobs):
     elektra_path = os.path.join(root_dir, ELEKTRA_PREFIX)
     build_path = os.path.join(root_dir, BUILD_PREFIX)
     install_path = os.path.join(root_dir, INSTALL_PREFIX)
-    kdb_path = os.path.join(install_path, "bin", "kdb")
+    kdb_config_path = os.path.join(root_dir, "config", "kdb")
 
     clean_cmd = f"rm -rf {install_path}"
     if clean_build:
         clean_cmd += f" {build_path}"
 
     setup_cmd = f"{clean_cmd} && \\\nmkdir -p {build_path} {install_path} && \\\ncd {build_path}"
-    cmake_cmd = build_cmake_cmd(elektra_path, install_path, build_doc, plugins, tools, bindings)
+    cmake_cmd = build_cmake_cmd(elektra_path, install_path, kdb_config_path, build_doc, plugins, tools, bindings)
     make_cmd = build_make_cmd(8)
 
     cmd = f"{setup_cmd} && \\\n{cmake_cmd} && \\\n{make_cmd}"
 
     if run_tests:
-        test_cmd = build_test_cmd(kdb_path)
+        test_cmd = build_test_cmd(8)
         cmd += f" && \\\n{test_cmd}"
 
     return cmd
