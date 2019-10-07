@@ -19,6 +19,9 @@ def generate_build_command_lcdproc(root_dir, build_type = "Release", clean_build
 
     return cmd
 
+def generate_build_command_toml(root_dir, build_type = "Release", run_tests = False, clean_build = False):
+    return generate_build_command(root_dir, build_type, run_tests, clean_build, True, "MAINTAINED;-EXPERIMENTAL;toml;-yajl", None, None, 8)
+
 def generate_build_command(root_dir, build_type, run_tests, clean_build, build_doc, plugins, tools, bindings, jobs):
     elektra_path = os.path.join(root_dir, ELEKTRA_PREFIX)
     build_path = os.path.join(root_dir, OUTPUT_PREFIX, BUILD_PREFIX)
@@ -52,7 +55,7 @@ def generate_cmake(build_type, elektra_path, install_path, kdb_config_path, buil
     cmd += f' \\\n\t-DKDB_DB_SYSTEM="{kdb_system_path}"'
     cmd += f' \\\n\t-DKDB_DB_SPEC="{kdb_spec_path}"'
     cmd += f' \\\n\t-DKDB_DB_HOME="{kdb_home_path}"'
-    cmd += " \\\n\t-DBUILD_STATIC=ON -DBUILD_COVERAGE=ON"
+    cmd += " \\\n\t-DBUILD_STATIC=ON"
 
     if build_doc:
         cmd += " \\\n\t-DBUILD_DOCUMENTATION=ON"
