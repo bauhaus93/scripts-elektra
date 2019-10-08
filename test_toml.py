@@ -46,6 +46,15 @@ def clear_fail():
     if os.path.exists("fail.text"):
         os.remove("fail.txt")
 
+def time_str(start):
+    diff = time.time() - start
+    if diff < 1.0:
+        return "{}ms".format(int(diff * 1000))
+    elif diff < 60.0:
+        return "{.2}s".format(diff)
+    else:
+        return "{}m {}s".format(int(diff) / 60, int(diff) % 60)
+
 CURR_DIR = os.path.abspath(".")
 PARSER = os.path.join(CURR_DIR, "toml_parser")
 
@@ -77,12 +86,14 @@ if __name__ == "__main__":
                     logger.info(f"{bcolors.FAIL}{bcolors.BOLD}Failure{bcolors.ENDC}: {toml_file}")
                     add_fail(toml_file)
                 count += 1
-            logger.info("Finished in {}s".format(int(time.time() - start)))
+            logger.info("====================================");
+            logger.info("Finished in {}".format(time_str(start)))
             if success == count:
                 color = f"{bcolors.OKGREEN}{bcolors.BOLD}"
             else:
                 color = f"{bcolors.FAIL}{bcolors.BOLD}"
             logger.info(f"Result: {color}{success}/{count}{bcolors.ENDC} OK")
+            logger.info("====================================");
         else:
             logger.error(f"Could not find parser in {args.parser_dir}")
             exit(1)
