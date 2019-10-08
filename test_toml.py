@@ -6,7 +6,7 @@ import argparse
 import logging
 import time
 
-from util import setup_logger
+from util import setup_logger, list_toml
 
 logger = logging.getLogger()
 
@@ -32,12 +32,6 @@ def test_file(file_path, parser_path, silent = True):
         except subprocess.CalledProcessError as e:
             return False
 
-def list_toml(root):
-    for root, dirs, files in os.walk(root):
-        for name in files:
-            if name.endswith(".toml"):
-                yield os.path.abspath(os.path.join(root, name))
-
 def add_fail(file_path):
     with open("fail.txt", "a+") as f:
         f.write(file_path + "\n")
@@ -51,7 +45,7 @@ def time_str(start):
     if diff < 1.0:
         return "{}ms".format(int(diff * 1000))
     elif diff < 60.0:
-        return "{.2}s".format(diff)
+        return "{:.2}s".format(diff)
     else:
         return "{}m {}s".format(int(diff) / 60, int(diff) % 60)
 
