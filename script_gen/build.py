@@ -2,14 +2,9 @@ import os
 
 from glob import ELEKTRA_PREFIX, LCDPROC_PREFIX, OUTPUT_PREFIX, BUILD_PREFIX, INSTALL_PREFIX
 
-def generate_build_command_toml(root_dir, build_type = "Release", run_tests = False, clean_build = False):
-    return generate_build_command(root_dir, build_type, run_tests, clean_build, True, "MAINTAINED;-EXPERIMENTAL;toml;-yajl", None, None, 8)
-
 def generate_build_command(root_dir, target, build_type, run_tests, run_shell, clean_build):
     elektra_path = os.path.join(root_dir, ELEKTRA_PREFIX)
     build_path = os.path.join(root_dir, OUTPUT_PREFIX, BUILD_PREFIX)
-    install_path = os.path.join(root_dir, OUTPUT_PREFIX, INSTALL_PREFIX)
-    kdb_config_path = os.path.join(root_dir, OUTPUT_PREFIX, "config", "kdb")
 
     plugins = None
     tools = None
@@ -26,15 +21,16 @@ def generate_build_command(root_dir, target, build_type, run_tests, run_shell, c
     elif target == "toml":
         plugins = "MAINTAINED;-EXPERIMENTAL;toml"
 
-    clean_cmd = f"rm -rf {install_path} {kdb_config_path}"
     if clean_build:
-        clean_cmd += f" {build_path}"
+        clean_cmd = f"rm -rf {build_path} && \\\n"
+    else:
+        clean_cmd = ""
 
-    setup_cmd = f"{clean_cmd} && \\\nmkdir -p {build_path} {install_path} && \\\ncd {build_path}"
-    cmake_cmd = generate_cmake(build_type, elektra_path, install_path, kdb_config_path, build_doc, run_tests, plugins, tools, bindings)
+    setup_cmd = f"{clean_cmd}mkdir -p {build_path} && \\\ncd {build_path}"
+    cmake_cmd = generate_cmake(build_type, elektra_path, build_doc, run_tests, plugins, tools, bindings)
     make_cmd = generate_make(8)
 
-    cmd = f"{setup_cmd} && \\\n{cmake_cmd} && \\\n{make_cmd}"
+    cmd = f"{setup_cmd} && \\\n{cmake_cmd} && \\\n{make_cmd} && \\\nsudo ldconfig"
 
     if lcdproc_cmd:
         cmd += f" && \\\n{lcdproc_cmd}"
@@ -48,17 +44,10 @@ def generate_build_command(root_dir, target, build_type, run_tests, run_shell, c
 
     return cmd
 
-def generate_cmake(build_type, elektra_path, install_path, kdb_config_path, build_doc, build_testing, plugins, tools, bindings):
-    kdb_system_path = os.path.join(kdb_config_path, "system")
-    kdb_spec_path = os.path.join(kdb_config_path, "spec")
-    kdb_home_path = os.path.join(kdb_config_path, "home")
+def generate_cmake(build_type, elektra_path, build_doc, build_testing, plugins, tools, bindings):
 
     cmd = f"cmake {elektra_path}"
     cmd += f"\\\n\t-DCMAKE_BUILD_TYPE={build_type}"
-    cmd += f'\\\n\t-DCMAKE_INSTALL_PREFIX="{install_path}"'
-    cmd += f' \\\n\t-DKDB_DB_SYSTEM="{kdb_system_path}"'
-    cmd += f' \\\n\t-DKDB_DB_SPEC="{kdb_spec_path}"'
-    cmd += f' \\\n\t-DKDB_DB_HOME="{kdb_home_path}"'
     cmd += " \\\n\t-DBUILD_STATIC=ON"
 
     if build_doc:
@@ -86,7 +75,7 @@ def generate_cmake(build_type, elektra_path, install_path, kdb_config_path, buil
 def generate_make(install = True, jobs = 8):
     cmd = f"make -j{jobs}"
     if install:
-        cmd += " install"
+        cmd += " &&\\\nsudo make install"
     return cmd
 
 def generate_test(jobs = 8):
@@ -100,23 +89,16 @@ def generate_lcdproc(root_dir):
     
     setup_cmd = f"cd {lcdproc_path} && \\\nmake clean"
     configure_cmd = generate_lcdproc_configure(install_path)
-    build_cmd = f"sh ./autogen.sh && \\\n{configure_cmd} && \\\n {path_extend_bin(root_dir)} make install"
+    build_cmd = f"sh ./autogen.sh && \\\n{configure_cmd} && \\\nsudo make install"
     post_build_cmd = "./post-install.sh"
     set_driver_cmd = f"kdb set '/sw/lcdproc/lcdd/#0/current/server/drivers/#0' '@/curses/#0'"
-    invoke_LCDd_cmd = "LCDd -f"
 
-    cmd = f"{setup_cmd} && \\\n{build_cmd} && \\\n{post_build_cmd} && \\\n{set_driver_cmd} && \\\n{invoke_LCDd_cmd}"
+    cmd = f"{setup_cmd} && \\\n{build_cmd} && \\\n{post_build_cmd} && \\\n{set_driver_cmd}"
 
     return cmd
 
-def generate_lcdproc_configure(install_path, debug = True):
-    cmd = f'PKG_CONFIG_PATH="{install_path}/lib/pkgconfig" ./configure'
-    cmd += f" \\\n\t--prefix={install_path}"
+def generate_lcdproc_configure(debug = True):
+    cmd = f'PKG_CONFIG_PATH="/usr/local/lib/pkgconfig" ./configure'
     if debug:
         cmd += f" \\\n\t--enable-debug"
-    return cmd
-
-def path_extend_bin(root_dir):
-    bin_dir = os.path.join(root_dir, OUTPUT_PREFIX, INSTALL_PREFIX, "bin")
-    cmd = f'PATH="$PATH:{bin_dir}"'
     return cmd
