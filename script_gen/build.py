@@ -2,31 +2,29 @@ import os
 
 from glob import ELEKTRA_PREFIX, LCDPROC_PREFIX, OUTPUT_PREFIX, BUILD_PREFIX, INSTALL_PREFIX
 
-def generate_build_command_default(root_dir, build_type = "Release", run_tests = False, clean_build = False):
-    return generate_build_command(root_dir, build_type, run_tests, clean_build, False, None, None, None, 8)
-
-def generate_build_command_all(root_dir, build_type = "Releaase", run_tests = False, clean_build = False):
-    return generate_build_command(root_dir, build_type, run_tests, clean_build, True, "ALL", "ALL", "ALL", 8)
-
-def generate_build_command_lcdproc(root_dir, build_type = "Release", clean_build = False):
-    LCDPROC_PLUGINS = "c;cache;dump;gopts;hexnumber;ini;list;mmapstorage;network;ni;noresolver;path;quickdump;range;reference;resolver;resolver_fm_hpu_b;spec;specload;type;validation;sync"
-
-    path_export_cmd = generate_path_export(root_dir)
-    elektra_build_cmd = generate_build_command(root_dir, build_type, False, clean_build, False, LCDPROC_PLUGINS, None, None, 8)
-    lcdproc_build_cmd = generate_lcdproc(root_dir)
-
-    cmd = f"{path_export_cmd} && \\\n{elektra_build_cmd} && \\\n{lcdproc_build_cmd}"
-
-    return cmd
-
 def generate_build_command_toml(root_dir, build_type = "Release", run_tests = False, clean_build = False):
     return generate_build_command(root_dir, build_type, run_tests, clean_build, True, "MAINTAINED;-EXPERIMENTAL;toml;-yajl", None, None, 8)
 
-def generate_build_command(root_dir, build_type, run_tests, clean_build, build_doc, plugins, tools, bindings, jobs):
+def generate_build_command(root_dir, target, build_type, run_tests, run_shell, clean_build):
     elektra_path = os.path.join(root_dir, ELEKTRA_PREFIX)
     build_path = os.path.join(root_dir, OUTPUT_PREFIX, BUILD_PREFIX)
     install_path = os.path.join(root_dir, OUTPUT_PREFIX, INSTALL_PREFIX)
     kdb_config_path = os.path.join(root_dir, OUTPUT_PREFIX, "config", "kdb")
+
+    plugins = None
+    tools = None
+    bindings = None
+    build_doc = False
+    lcdproc_cmd = None
+    if target == "all":
+        plugins = "ALL"
+        tools = "ALL"
+        bindings = "ALL"
+    elif target == "lcdproc":
+        plugins = "c;cache;dump;gopts;hexnumber;ini;list;mmapstorage;network;ni;noresolver;path;quickdump;range;reference;resolver;resolver_fm_hpu_b;spec;specload;type;validation;sync"
+        lcdproc_cmd = generate_lcdproc(root_dir)
+    elif target == "toml":
+        plugins = "MAINTAINED;-EXPERIMENTAL;toml"
 
     clean_cmd = f"rm -rf {install_path} {kdb_config_path}"
     if clean_build:
@@ -38,9 +36,15 @@ def generate_build_command(root_dir, build_type, run_tests, clean_build, build_d
 
     cmd = f"{setup_cmd} && \\\n{cmake_cmd} && \\\n{make_cmd}"
 
+    if lcdproc_cmd:
+        cmd += f" && \\\n{lcdproc_cmd}"
+
     if run_tests:
         test_cmd = generate_test(16)
         cmd += f" && \\\n{test_cmd}"
+
+    if run_shell:
+        cmd += f" && \\\nbash"
 
     return cmd
 
@@ -96,7 +100,7 @@ def generate_lcdproc(root_dir):
     
     setup_cmd = f"cd {lcdproc_path} && \\\nmake clean"
     configure_cmd = generate_lcdproc_configure(install_path)
-    build_cmd = f"sh ./autogen.sh && \\\n{configure_cmd} && \\\nmake install"
+    build_cmd = f"sh ./autogen.sh && \\\n{configure_cmd} && \\\n {path_extend_bin(root_dir)} make install"
     post_build_cmd = "./post-install.sh"
     set_driver_cmd = f"kdb set '/sw/lcdproc/lcdd/#0/current/server/drivers/#0' '@/curses/#0'"
     invoke_LCDd_cmd = "LCDd -f"
@@ -105,12 +109,14 @@ def generate_lcdproc(root_dir):
 
     return cmd
 
-def generate_lcdproc_configure(install_path):
+def generate_lcdproc_configure(install_path, debug = True):
     cmd = f'PKG_CONFIG_PATH="{install_path}/lib/pkgconfig" ./configure'
     cmd += f" \\\n\t--prefix={install_path}"
+    if debug:
+        cmd += f" \\\n\t--enable-debug"
     return cmd
 
-def generate_path_export(root_dir):
+def path_extend_bin(root_dir):
     bin_dir = os.path.join(root_dir, OUTPUT_PREFIX, INSTALL_PREFIX, "bin")
-    cmd = f'export PATH="$PATH:{bin_dir}"'
+    cmd = f'PATH="$PATH:{bin_dir}"'
     return cmd
