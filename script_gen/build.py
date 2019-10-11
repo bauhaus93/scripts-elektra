@@ -5,6 +5,7 @@ from glob import ELEKTRA_PREFIX, LCDPROC_PREFIX, OUTPUT_PREFIX, BUILD_PREFIX, IN
 def generate_build_command(root_dir, target, build_type, run_tests, run_shell, clean_build):
     elektra_path = os.path.join(root_dir, ELEKTRA_PREFIX)
     build_path = os.path.join(root_dir, OUTPUT_PREFIX, BUILD_PREFIX)
+    kdb_config_path = os.path.join(root_dir, OUTPUT_PREFIX, "config", "kdb")
 
     plugins = None
     tools = None
@@ -27,7 +28,7 @@ def generate_build_command(root_dir, target, build_type, run_tests, run_shell, c
         clean_cmd = ""
 
     setup_cmd = f"{clean_cmd}mkdir -p {build_path} && \\\ncd {build_path}"
-    cmake_cmd = generate_cmake(build_type, elektra_path, build_doc, run_tests, plugins, tools, bindings)
+    cmake_cmd = generate_cmake(build_type, elektra_path, kdb_config_path, build_doc, run_tests, plugins, tools, bindings)
     make_cmd = generate_make(8)
 
     cmd = f"{setup_cmd} && \\\n{cmake_cmd} && \\\n{make_cmd} && \\\nsudo ldconfig"
@@ -44,10 +45,16 @@ def generate_build_command(root_dir, target, build_type, run_tests, run_shell, c
 
     return cmd
 
-def generate_cmake(build_type, elektra_path, build_doc, build_testing, plugins, tools, bindings):
-
+def generate_cmake(build_type, elektra_path, kdb_config_path, build_doc, build_testing, plugins, tools, bindings):
+    kdb_system_path = os.path.join(kdb_config_path, "system")
+    kdb_spec_path = os.path.join(kdb_config_path, "spec")
+    kdb_home_path = os.path.join(kdb_config_path, "home")
+    
     cmd = f"cmake {elektra_path}"
     cmd += f"\\\n\t-DCMAKE_BUILD_TYPE={build_type}"
+    cmd += f' \\\n\t-DKDB_DB_SYSTEM="{kdb_system_path}"'
+    cmd += f' \\\n\t-DKDB_DB_SPEC="{kdb_spec_path}"'
+    cmd += f' \\\n\t-DKDB_DB_HOME="{kdb_home_path}"'
     cmd += " \\\n\t-DBUILD_STATIC=ON"
 
     if build_doc:
