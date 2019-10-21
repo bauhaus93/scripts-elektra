@@ -2,7 +2,7 @@ import os
 
 from glob import ELEKTRA_PREFIX, LCDPROC_PREFIX, OUTPUT_PREFIX, BUILD_PREFIX, INSTALL_PREFIX
 
-def generate_build_command(root_dir, target, build_type, run_tests, run_shell, clean_build):
+def generate_build_command(root_dir, target, build_type, install, run_tests, run_shell, clean_build):
     elektra_path = os.path.join(root_dir, ELEKTRA_PREFIX)
     build_path = os.path.join(root_dir, OUTPUT_PREFIX, BUILD_PREFIX)
     kdb_config_path = os.path.join(root_dir, OUTPUT_PREFIX, "config", "kdb")
@@ -19,19 +19,25 @@ def generate_build_command(root_dir, target, build_type, run_tests, run_shell, c
     elif target == "lcdproc":
         plugins = "c;cache;dump;gopts;hexnumber;ini;list;mmapstorage;network;ni;noresolver;path;quickdump;range;reference;resolver;resolver_fm_hpu_b;spec;specload;type;validation;sync"
         lcdproc_cmd = generate_lcdproc(root_dir)
-    elif target == "toml":
+    elif "toml" in target:
         plugins = "MAINTAINED;-EXPERIMENTAL;toml"
-
     if clean_build:
         clean_cmd = f"rm -rf {build_path} && \\\n"
     else:
         clean_cmd = ""
 
     setup_cmd = f"{clean_cmd}mkdir -p {build_path} && \\\ncd {build_path}"
-    cmake_cmd = generate_cmake(build_type, elektra_path, kdb_config_path, build_doc, run_tests, plugins, tools, bindings)
-    make_cmd = generate_make(8)
+    if not target == "toml_min":
+        cmake_cmd = "&& \\\n" + generate_cmake(build_type, elektra_path, kdb_config_path, build_doc, run_tests, plugins, tools, bindings)
+    else:
+        cmake_cmd = ""
+    make_cmd = generate_make(install, 8)
+    if install:
+        ld_cmd = f"&& \\\nsudo ldconfig"
+    else:
+        ld_cmd = ""
 
-    cmd = f"{setup_cmd} && \\\n{cmake_cmd} && \\\n{make_cmd} && \\\nsudo ldconfig"
+    cmd = f"{setup_cmd} {cmake_cmd} {make_cmd} {ld_cmd}"
 
     if lcdproc_cmd:
         cmd += f" && \\\n{lcdproc_cmd}"
@@ -83,7 +89,7 @@ def generate_make(install = True, jobs = 8):
     cmd = f"make -j{jobs}"
     if install:
         cmd += " &&\\\nsudo make install"
-    return cmd
+    return "&& \\\n" + cmd
 
 def generate_test(jobs = 8):
     cmd = f"ctest -j {jobs} --force-new-ctest-process --output-on-failure --no-compress-output"
