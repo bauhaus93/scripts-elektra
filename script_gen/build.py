@@ -58,6 +58,8 @@ def generate_cmake(build_type, elektra_path, kdb_config_path, build_doc, build_t
     
     cmd = f"cmake {elektra_path}"
     cmd += f"\\\n\t-DCMAKE_BUILD_TYPE={build_type}"
+    if build_type == "Debug":
+	    cmd += f"\\\n\t-DENABLE_DEBUG=ON"
     cmd += f' \\\n\t-DKDB_DB_SYSTEM="{kdb_system_path}"'
     cmd += f' \\\n\t-DKDB_DB_SPEC="{kdb_spec_path}"'
     cmd += f' \\\n\t-DKDB_DB_HOME="{kdb_home_path}"'
