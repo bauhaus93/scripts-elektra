@@ -27,3 +27,5 @@ print_or_exit "TOOLS" $TOOLS
 print_or_exit "BINDINGS" $BINDINGS
 print_or_silent "INCLUDE_TESTS" $INCLUDE_TESTS
 print_or_silent "EXCLUDE_TESTS" $EXCLUDE_TESTS
+
+echo "######"

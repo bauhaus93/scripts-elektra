@@ -12,6 +12,7 @@ fi
 SCRIPTS_DIR="../scripts"
 SCRIPT_PATH="$SCRIPTS_DIR/container/build/$SCRIPT_NAME"
 ENV_PATH="$SCRIPTS_DIR/container/env/$ENV_NAME"
+ECHO_PATH="$SCRIPTS_DIR/container/env/env_echo.sh"
 
 if [ ! -d $SCRIPTS_DIR ]
 then
@@ -31,13 +32,20 @@ then
 	exit 1
 fi
 
-source $ENV_PATH
-
-if ! $SCRIPTS_DIR/container/env/env_echo.sh
+if [ ! -f $ECHO_PATH ]
 then
+	echo "Echo file not found: $ECHO_PATH"
 	exit 1
 fi
 
+if [ -z $ENV_DEFINED ]
+then
+	TMP_SCRIPT=$(mktemp --suffix=.sh -p /tmp starter_XXXXX) && \
+	cat $ENV_PATH $ECHO_PATH $0 > $TMP_SCRIPT && \
+	chmod +x $TMP_SCRIPT && \
+	$TMP_SCRIPT
+	exit $?
+fi
 LOCAL_BUILD_DIR="$PWD/$BUILD_DIR_NAME"
 
 rm -rf $LOCAL_BUILD_DIR && \
@@ -49,3 +57,4 @@ docker run -it --rm \
         -w $JENKINS_WORKSPACE_DIR \
         $DOCKER_IMAGE \
         sh $JENKINS_BUILD_DIR/run.sh
+rm $0
